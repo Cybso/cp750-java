@@ -58,6 +58,20 @@ public class TestCp750Client extends TestCase {
         assertEquals(100, this.client.getFader());
     }
 
+    public void testFaderDelta() {
+        assertEquals(35, this.client.getFader());
+        this.client.setFaderDelta(10);
+        assertEquals(45, this.client.getFader());
+        this.client.setFaderDelta(-10);
+        assertEquals(35, this.client.getFader());
+        this.client.setFaderDelta(100);
+        assertEquals(100, this.client.getFader());
+        this.client.setFaderDelta(-100);
+        assertEquals(0, this.client.getFader());
+        this.client.setFaderDelta(-10);
+        assertEquals(0, this.client.getFader());
+    }
+
     public void testInputMode() {
         assertEquals(CP750InputMode.NON_SYNC, this.client.getInputMode());
         this.client.setInputMode(CP750InputMode.DIG_1);

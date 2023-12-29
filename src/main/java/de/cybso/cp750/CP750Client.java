@@ -32,6 +32,11 @@ public class CP750Client implements Closeable, AutoCloseable {
 
         // Test connection
         for (CP750Field field : CP750Field.values()) {
+            if (field.getKey().startsWith("cp750.ctrl.")) {
+                // ctrl-Fields do not have a status value
+                continue;
+            }
+
             this.out.println(field.getKey() + " ?");
             String line = this.in.readLine();
             if (!line.startsWith(field.getKey())) {
@@ -129,6 +134,10 @@ public class CP750Client implements Closeable, AutoCloseable {
 
     public void setFader(int value) {
         send(CP750Field.SYS_FADER, String.valueOf(value));
+    }
+
+    public void setFaderDelta(int value) {
+        send(CP750Field.CTRL_FADER_DELTA, String.valueOf(value));
     }
 
     public boolean isMuted() {

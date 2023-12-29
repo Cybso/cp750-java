@@ -149,6 +149,18 @@ public class Cp750ServerMockup extends Thread implements AutoCloseable {
                         }
                     }
                     break;
+                case "cp750.ctrl.fader_delta":
+                    try {
+                        int intVal = Integer.parseInt(value);
+                        if (intVal >= -100 && intVal <= 100) {
+                            stateEngine.fader += intVal;
+                            if (stateEngine.fader < 0) stateEngine.fader = 0;
+                            if (stateEngine.fader > 100) stateEngine.fader = 100;
+                            writeln(out, key + " " + stateEngine.fader);
+                        }
+                    } catch (NumberFormatException ignore) {
+                    }
+                    break;
                 case "cp750.sys.mute":
                     switch (value) {
                         case "?":

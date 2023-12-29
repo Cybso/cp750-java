@@ -6,6 +6,7 @@ public enum CP750Field {
 
     SYSINFO_VERSION("cp750.sysinfo.version"),
     SYS_FADER("cp750.sys.fader", 0, 100),
+    CTRL_FADER_DELTA("cp750.ctrl.fader_delta", -100, 100),
     SYS_MUTE("cp750.sys.mute", 0, 1),
     SYS_INPUT_MODE("cp750.sys.input_mode", CP750InputMode.getValues());
 
