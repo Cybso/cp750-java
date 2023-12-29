@@ -31,7 +31,7 @@ public enum CP750Field {
         this.allowedValues = new HashSet<>();
         this.allowedValues.add("?");
         for (int i = from; i <= to; i++) {
-            this.allowedValues.add("" + i);
+            this.allowedValues.add(String.valueOf(i));
         }
         this.hasRange = true;
         this.rangeTo = to;

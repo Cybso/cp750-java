@@ -4,11 +4,10 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Throwable {
-        String ip = "192.168.1.136";
+        String ip = "192.168.1.136x";
         int port = 61408;
         try(CP750Client client = new CP750Client(ip, port)) {
-            CP750Communicator communicator = client.getCommunicator();
-            client.setAutoPullInterval(5000);
+            client.setRefreshInterval(5000);
             Scanner input = new Scanner(System.in);
             while (input.hasNextLine()) {
                 String line = input.nextLine().trim();
@@ -46,7 +45,7 @@ public class Main {
                     if (field == null) {
                         System.err.println("Unknown field");
                     }
-                    System.out.println(communicator.getCurrentValue(field));
+                    System.out.println(client.getCurrentValue(field));
                     continue;
                 }
 
@@ -56,7 +55,10 @@ public class Main {
                     continue;
                 }
 
-                communicator.send(field, value, (field1, value1) -> System.out.println(field1.getKey() + " = " + value1));
+                value = client.send(field, value);
+                if (!value.isEmpty()) {
+                    System.out.println("< " + value);
+                }
             }
         }
     }
