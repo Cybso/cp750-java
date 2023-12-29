@@ -1,6 +1,6 @@
 package de.cybso.cp750;
 
-enum CP750InputMode {
+public enum CP750InputMode {
     ANALOG("analog"),
     DIG_1("dig_1"),
     DIG_2("dig_2"),

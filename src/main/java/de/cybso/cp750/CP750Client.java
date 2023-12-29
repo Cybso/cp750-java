@@ -34,15 +34,13 @@ public class CP750Client implements Closeable, AutoCloseable {
         for (CP750Field field : CP750Field.values()) {
             this.out.println(field.getKey() + " ?");
             String line = this.in.readLine();
-            while (line.isEmpty()) {
-                line = this.in.readLine();
-            }
-
-            if (line.startsWith(field.getKey())) {
-                processInputLine(line);
-            } else {
+            if (!line.startsWith(field.getKey())) {
                 throw new IOException("Unexpected response from server: " + line);
             }
+
+            do {
+                processInputLine(line);
+            } while (!(line = in.readLine()).isEmpty());
         }
     }
 
@@ -138,7 +136,7 @@ public class CP750Client implements Closeable, AutoCloseable {
     }
 
     public void setMuted(boolean mute) {
-        send(CP750Field.SYS_MUTE, mute ? "0" : "1");
+        send(CP750Field.SYS_MUTE, mute ? "1" : "0");
     }
 
     public CP750InputMode getInputMode() {
@@ -158,7 +156,7 @@ public class CP750Client implements Closeable, AutoCloseable {
             LOGGER.warning("Ignoring unallowed value for field " + field + ": " + value);
         }
 
-        return send(field + " " + value);
+        return send(field.getKey() + " " + value);
     }
 
     protected String query(CP750Field field) {
@@ -267,11 +265,12 @@ public class CP750Client implements Closeable, AutoCloseable {
 
     private class RefreshTimer extends Thread {
 
-        private long nextAutoRefresh = 0L;
+        private long nextAutoRefresh;
         private long refreshInterval;
 
         RefreshTimer(long refreshInterval) {
             this.refreshInterval = refreshInterval;
+            this.nextAutoRefresh = System.currentTimeMillis() + refreshInterval;
         }
 
         long getRefreshInterval() {
@@ -281,6 +280,7 @@ public class CP750Client implements Closeable, AutoCloseable {
         void setRefreshInterval(long value) {
             synchronized (this) {
                 this.refreshInterval = value;
+                this.nextAutoRefresh = System.currentTimeMillis() + refreshInterval;
                 notify();
             }
         }
