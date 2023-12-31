@@ -3,15 +3,15 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>de.cybso.cp750</groupId>
   <artifactId>cp750</artifactId>
-  <version>0.1</version>
+  <version>0.2</version>
   <packaging>jar</packaging>
-  <name>CP750 API Library</name>
-  <description>A library for controlling a CP750 using TCP/IP</description>
+  <name>CP750 API Client</name>
+  <description>A library for controlling a CP750 Digital Cinema Processor using TCP/IP</description>
   <url>https://github.com/cybso/cp750-java</url>
   <licenses>
     <license>
-      <name>GNU Lesser General Public License, Version 3.0</name>
-      <url>https://www.gnu.org/licenses/lgpl-3.0.txt</url>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
       <distribution>repo</distribution>
     </license>
   </licenses>
