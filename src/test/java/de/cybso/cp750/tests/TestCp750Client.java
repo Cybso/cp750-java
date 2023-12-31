@@ -64,6 +64,9 @@ public class TestCp750Client extends TestCase {
     public void testFaderDelta() throws Throwable {
         assertEquals(35, this.client.getFader());
         this.client.setFaderDelta(10);
+        // Check cached value
+        assertEquals("45", this.client.getCurrentValue(CP750Field.SYS_FADER));
+        // Check real value
         assertEquals(45, this.client.getFader());
         this.client.setFaderDelta(-10);
         assertEquals(35, this.client.getFader());
@@ -114,17 +117,25 @@ public class TestCp750Client extends TestCase {
         CP750Listener listener = (field, value) -> container.add(value);
         this.client.addListener(CP750Field.SYS_FADER, listener);
         assertTrue(container.isEmpty());
-        this.client.setInputMode(CP750InputMode.DIG_1);
+        this.client.setMuted(true);
         assertTrue(container.isEmpty());
-        this.client.setFader(10);
+
+        // setInputMode will automatically update the fader's state
+        this.client.setInputMode(CP750InputMode.DIG_1);
         assertEquals(1, container.size());
-        assertEquals("10", container.get(0));
-        this.client.setFader(20);
+        assertEquals("35", container.get(0));
+
+        this.client.setFader(10);
         assertEquals(2, container.size());
-        assertEquals("20", container.get(1));
+        assertEquals("10", container.get(1));
+
+        this.client.setFader(20);
+        assertEquals(3, container.size());
+        assertEquals("20", container.get(2));
+
         this.client.removeListener(listener);
         this.client.setFader(30);
-        assertEquals(2, container.size());
+        assertEquals(3, container.size());
     }
 
     public void testOnetimeListener() throws Throwable {
@@ -132,7 +143,7 @@ public class TestCp750Client extends TestCase {
         CP750Listener listener = (field, value) -> container.add(value);
         this.client.addOnetimeListener(CP750Field.SYS_FADER, listener);
         assertTrue(container.isEmpty());
-        this.client.setInputMode(CP750InputMode.DIG_1);
+        this.client.setMuted(true);
         assertTrue(container.isEmpty());
         this.client.setFader(10);
         assertEquals(1, container.size());

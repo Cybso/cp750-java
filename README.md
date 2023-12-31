@@ -1,8 +1,17 @@
 ## About The Project
 
-Small library to communicate with a *Dolby Digital Cinema Processor CP750*.
+Simple Java library to communicate with a *Dolby Digital Cinema Processor CP750*.
 
-## Usage:
+It uses ASCII commands send over a TCP connection on port 61408. Please note that
+the CP750 only accepts up to 20 simultaneous connection and will discard
+the oldest connection if a 21st connection is established. So be sure to grateful
+shutdown each connection using the client's `close()` method, or it's
+`AutoCloseable` functionality.
+
+This project is NOT affiliated with, funded, or in any way associafunctionalityted
+with *Dolby Laboratories, Inc*.
+
+## Usage
 
 ```java
 public class Main {
@@ -32,7 +41,9 @@ public class Main {
 }
 ```
 
-## TODO
+## Implemented commands
 
-Until now, only commands for querying and changing mute, volume and input mode
-have been implemented.
+* Version check
+* Input Mode control
+* Fader control (absolute and delta changes)
+* Mute control
