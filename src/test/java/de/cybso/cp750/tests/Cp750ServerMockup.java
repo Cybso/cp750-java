@@ -16,6 +16,13 @@ public class Cp750ServerMockup extends Thread implements AutoCloseable {
 
     private final List<WorkerThread> workers = new ArrayList<>();
 
+    /**
+     * Stop reading or sending output. Used for testing stalled connections.
+     */
+    private boolean paused;
+
+    private final Object pauseMonitor = new Object();
+
     public Cp750ServerMockup() throws IOException {
         this(0);
     }
@@ -35,6 +42,21 @@ public class Cp750ServerMockup extends Thread implements AutoCloseable {
 
     public Cp750StateEngine getStateEngine() {
         return this.stateEngine;
+    }
+
+    public boolean isPaused() {
+        return paused;
+    }
+
+    public void setPaused(boolean paused) {
+        synchronized (this.pauseMonitor) {
+            this.paused = paused;
+            this.pauseMonitor.notifyAll();
+        }
+    }
+
+    public int getActiveConnections() {
+        return this.workers.size();
     }
 
     @Override
@@ -57,15 +79,17 @@ public class Cp750ServerMockup extends Thread implements AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        interrupt();
-        try {
-            join(1000);
-        } catch (Exception ignore) {
+        if (!this.serverSocket.isClosed()) {
+            interrupt();
+            try {
+                join(1000);
+            } catch (Exception ignore) {
+            }
+            for (WorkerThread worker : new ArrayList<>(this.workers)) {
+                worker.close();
+            }
+            this.serverSocket.close();
         }
-        for (WorkerThread worker : new ArrayList<>(this.workers)) {
-            worker.close();
-        }
-        this.serverSocket.close();
     }
 
     private class WorkerThread extends Thread implements AutoCloseable {
@@ -88,13 +112,25 @@ public class Cp750ServerMockup extends Thread implements AutoCloseable {
                 while (!isInterrupted()) {
                     String line;
                     while (null != (line = in.readLine())) {
+                        if (isPaused()) {
+                            synchronized (Cp750ServerMockup.this.pauseMonitor) {
+                                while (isPaused() && !isInterrupted()) {
+                                    try {
+                                        Cp750ServerMockup.this.pauseMonitor.wait(100);
+                                    } catch (InterruptedException ignore) {
+                                    }
+                                }
+                            }
+                        }
                         processLine(line);
                     }
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
             } finally {
-                close();
+                if (!client.isClosed()) {
+                    close();
+                }
             }
         }
 
@@ -110,6 +146,9 @@ public class Cp750ServerMockup extends Thread implements AutoCloseable {
             }
 
             switch (key) {
+                case "exit":
+                    close();
+                    break;
                 case "cp750.sysinfo.version":
                     if (value.equals("?")) {
                         writeln(out, key + " " + stateEngine.version);
@@ -153,10 +192,11 @@ public class Cp750ServerMockup extends Thread implements AutoCloseable {
                     try {
                         int intVal = Integer.parseInt(value);
                         if (intVal >= -100 && intVal <= 100) {
-                            stateEngine.fader += intVal;
-                            if (stateEngine.fader < 0) stateEngine.fader = 0;
-                            if (stateEngine.fader > 100) stateEngine.fader = 100;
-                            writeln(out, key + " " + stateEngine.fader);
+                            int newValue = stateEngine.fader + intVal;
+                            if (newValue < 0) newValue = 0;
+                            if (newValue > 100) newValue = 100;
+                            stateEngine.fader = newValue;
+                            writeln(out, key + " " + intVal);
                         }
                     } catch (NumberFormatException ignore) {
                     }
@@ -193,10 +233,10 @@ public class Cp750ServerMockup extends Thread implements AutoCloseable {
             }
             interrupt();
             try {
-                this.in.close();
+                this.client.shutdownInput();
+                this.client.shutdownOutput();
             } catch (Exception ignore) {
             }
-            this.out.close();
             try {
                 this.client.close();
             } catch (Exception ignore) {

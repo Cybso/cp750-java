@@ -4,7 +4,7 @@ public class Cp750StateEngine {
 
     public static final String VERSION = "1.0-test";
 
-    public long fader = 35;
+    public int fader = 35;
 
     public boolean mute = false;
 

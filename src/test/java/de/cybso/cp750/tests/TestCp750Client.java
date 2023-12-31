@@ -6,6 +6,9 @@ import de.cybso.cp750.CP750InputMode;
 import de.cybso.cp750.CP750Listener;
 import junit.framework.TestCase;
 
+import java.io.IOException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 
 public class TestCp750Client extends TestCase {
@@ -32,7 +35,7 @@ public class TestCp750Client extends TestCase {
         assertEquals(Cp750StateEngine.VERSION, this.client.getVersion());
     }
 
-    public void testMute() {
+    public void testMute() throws Throwable {
         assertFalse(this.client.isMuted());
         this.client.setMuted(true);
         assertTrue(this.client.isMuted());
@@ -42,7 +45,7 @@ public class TestCp750Client extends TestCase {
         assertFalse(this.client.isMuted());
     }
 
-    public void testFader() {
+    public void testFader() throws Throwable {
         assertEquals(35, this.client.getFader());
         this.client.setFader(70);
         assertEquals(70, this.client.getFader());
@@ -58,7 +61,7 @@ public class TestCp750Client extends TestCase {
         assertEquals(100, this.client.getFader());
     }
 
-    public void testFaderDelta() {
+    public void testFaderDelta() throws Throwable {
         assertEquals(35, this.client.getFader());
         this.client.setFaderDelta(10);
         assertEquals(45, this.client.getFader());
@@ -72,7 +75,7 @@ public class TestCp750Client extends TestCase {
         assertEquals(0, this.client.getFader());
     }
 
-    public void testInputMode() {
+    public void testInputMode() throws Throwable {
         assertEquals(CP750InputMode.NON_SYNC, this.client.getInputMode());
         this.client.setInputMode(CP750InputMode.DIG_1);
         assertEquals(CP750InputMode.DIG_1, this.client.getInputMode());
@@ -106,7 +109,7 @@ public class TestCp750Client extends TestCase {
         assertEquals(2000, this.client.getRefreshInterval());
     }
 
-    public void testListener() {
+    public void testListener() throws Throwable {
         final ArrayList<String> container = new ArrayList<>();
         CP750Listener listener = (field, value) -> container.add(value);
         this.client.addListener(CP750Field.SYS_FADER, listener);
@@ -124,7 +127,7 @@ public class TestCp750Client extends TestCase {
         assertEquals(2, container.size());
     }
 
-    public void testOnetimeListener() {
+    public void testOnetimeListener() throws Throwable {
         final ArrayList<String> container = new ArrayList<>();
         CP750Listener listener = (field, value) -> container.add(value);
         this.client.addOnetimeListener(CP750Field.SYS_FADER, listener);
@@ -140,5 +143,61 @@ public class TestCp750Client extends TestCase {
         this.client.removeListener(listener);
         this.client.setFader(30);
         assertEquals(1, container.size());
+    }
+
+    public void testUnresponsiveConnection() throws Throwable {
+        // normal connection test
+        this.client.setInputMode(CP750InputMode.DIG_1);
+        assertEquals(CP750InputMode.DIG_1, this.client.getInputMode());
+
+        try {
+            // now test with server paused.
+            this.client.getSocket().setSoTimeout(1000);
+            this.server.setPaused(true);
+            this.client.setInputMode(CP750InputMode.DIG_2);
+            fail("Expected SocketTimeoutException");
+        } catch (SocketTimeoutException ignore) {
+            // This is fine
+        } catch (IOException e) {
+            e.printStackTrace();
+            fail("Unexpected IOException");
+        }
+    }
+
+    public void testClosedConnection() throws Throwable {
+        this.server.close();
+        this.client.getSocket().setSoTimeout(1000);
+        try {
+            this.client.setInputMode(CP750InputMode.DIG_1);
+            fail("SocketException expteced");
+        } catch (SocketException ignore) {
+            // This is fine
+        }
+    }
+
+    public void testFailedServerConnection() throws Throwable {
+        this.server.close();
+        try {
+            this.client = new CP750Client("127.0.0.1", this.server.getPort());
+            fail("SocketException expected");
+        } catch (SocketException ignore) {
+            // THis is fine
+        }
+    }
+
+    public void testFailedClientConnection() throws Throwable {
+        this.client.getSocket().close();
+        try {
+            this.client.setInputMode(CP750InputMode.DIG_1);
+            fail("SocketException expected");
+        } catch (SocketException ignore) {
+            // This is fine
+        }
+    }
+
+    public void testClientClose() throws Throwable {
+        assertEquals(1, this.server.getActiveConnections());
+        this.client.close();
+        assertEquals(0, this.server.getActiveConnections());
     }
 }

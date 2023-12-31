@@ -4,9 +4,26 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.example</groupId>
-    <artifactId>untitled</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <groupId>de.cybso.cp750</groupId>
+    <artifactId>cp750</artifactId>
+    <version>0.1</version>
+    <packaging>jar</packaging>
+
+    <name>CP750 API Library</name>
+    <description>A library for controlling a CP750 using TCP/IP</description>
+    <url>https://github.com/cybso/cp750-java</url>
+
+    <licenses>
+      <license>
+        <name>GNU Lesser General Public License, Version 3.0</name>
+        <url>https://www.gnu.org/licenses/lgpl-3.0.txt</url>
+        <distribution>repo</distribution>
+      </license>
+    </licenses>
+
+    <scm>
+      <url>https://github.com/cybso/cp750-java</url>
+    </scm>
 
     <properties>
         <junit.version>4.13.2</junit.version>
@@ -24,5 +41,27 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                        <configuration>
+                            <keyname>0EA3AD8D0B534F8CD1B04D8C975BEBB64D72DB0E</keyname>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

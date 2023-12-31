@@ -1,20 +1,28 @@
 package de.cybso.cp750;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class CP750Client implements Closeable, AutoCloseable {
 
+    /**
+     * Default socket / connect timeout in Milliseconds
+     */
+    public static final int DEFAULT_TIMEOUT = 10000;
+
     private final static Logger LOGGER = Logger.getLogger(CP750Client.class.getName());
 
     private final Socket socket;
+
     private final BufferedReader in;
+
     private final PrintStream out;
 
     private final Map<CP750Field, List<CP750Listener>> listeners = new HashMap<>();
@@ -39,18 +47,43 @@ public class CP750Client implements Closeable, AutoCloseable {
 
             this.out.println(field.getKey() + " ?");
             String line = this.in.readLine();
+            if (line == null) {
+                throw new SocketException("Connection closed unexpectedly");
+            }
             if (!line.startsWith(field.getKey())) {
                 throw new IOException("Unexpected response from server: " + line);
             }
 
-            do {
+            while (!line.isEmpty()) {
                 processInputLine(line);
-            } while (!(line = in.readLine()).isEmpty());
+                line = in.readLine();
+                if (line == null) {
+                    throw new SocketException("Connection closed unexpectedly");
+                }
+            }
         }
     }
 
     public CP750Client(String server, int port) throws IOException {
-        this(new Socket(server, port));
+        this(server, port, 0);
+    }
+
+    public CP750Client(String server, int port, int timeout) throws IOException {
+        this(createSocket(server, port, timeout));
+    }
+
+    private static Socket createSocket(String server, int port, int timeout) throws IOException {
+        if (timeout <= 0) {
+            timeout = DEFAULT_TIMEOUT;
+        }
+        Socket socket = new Socket();
+        socket.setSoTimeout(timeout);
+        socket.connect(new InetSocketAddress(server, port), timeout);
+        return socket;
+    }
+
+    public Socket getSocket() {
+        return this.socket;
     }
 
     public long getRefreshInterval() {
@@ -111,6 +144,7 @@ public class CP750Client implements Closeable, AutoCloseable {
     @Override
     public void close() {
         try {
+            send("exit");
             this.in.close();
             this.out.close();
             this.socket.close();
@@ -123,7 +157,7 @@ public class CP750Client implements Closeable, AutoCloseable {
         return getCurrentValue(CP750Field.SYSINFO_VERSION);
     }
 
-    public int getFader() {
+    public int getFader() throws IOException {
         String result = query(CP750Field.SYS_FADER);
         if (result.isEmpty()) {
             return 0;
@@ -132,65 +166,64 @@ public class CP750Client implements Closeable, AutoCloseable {
         }
     }
 
-    public void setFader(int value) {
+    public void setFader(int value) throws IOException {
         send(CP750Field.SYS_FADER, String.valueOf(value));
     }
 
-    public void setFaderDelta(int value) {
+    public void setFaderDelta(int value) throws IOException {
         send(CP750Field.CTRL_FADER_DELTA, String.valueOf(value));
     }
 
-    public boolean isMuted() {
+    public boolean isMuted() throws IOException {
         return query(CP750Field.SYS_MUTE).equals("1");
     }
 
-    public void setMuted(boolean mute) {
+    public void setMuted(boolean mute) throws IOException {
         send(CP750Field.SYS_MUTE, mute ? "1" : "0");
     }
 
-    public CP750InputMode getInputMode() {
+    public CP750InputMode getInputMode() throws IOException {
         return CP750InputMode.byValue(query(CP750Field.SYS_INPUT_MODE));
     }
 
-    public void setInputMode(CP750InputMode mode) {
+    public void setInputMode(CP750InputMode mode) throws IOException {
         send(CP750Field.SYS_INPUT_MODE, mode.value);
     }
 
-    public void refresh() {
+    public void refresh() throws IOException {
         send("status");
     }
 
-    protected String send(CP750Field field, String value) {
+    protected String send(CP750Field field, String value) throws IOException {
         if (!field.isAllowedValue(value)) {
             LOGGER.warning("Ignoring unallowed value for field " + field + ": " + value);
+            return "";
         }
 
         return send(field.getKey() + " " + value);
     }
 
-    protected String query(CP750Field field) {
+    protected String query(CP750Field field) throws IOException {
         return send(field, "?");
     }
 
-    protected String send(String raw) {
+    protected String send(String raw) throws IOException {
         synchronized (this.socket) {
             out.println(raw);
-            try {
-                String lastValue = "";
-                String line;
-                while ((line = in.readLine()) != null) {
-                    line = line.trim();
-                    if (line.isEmpty()) {
-                        break;
-                    }
-
-                    lastValue = processInputLine(line);
+            String lastValue = "";
+            String line;
+            while ((line = in.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) {
+                    break;
                 }
-                return lastValue;
-            } catch (IOException e) {
-                LOGGER.log(Level.SEVERE, "Failed to write to socket", e);
-                return "";
+
+                lastValue = processInputLine(line);
             }
+            if (line == null) {
+                throw new SocketException("Connection closed unexpectedly");
+            }
+            return lastValue;
         }
     }
 
@@ -302,7 +335,12 @@ public class CP750Client implements Closeable, AutoCloseable {
                         if (this.refreshInterval > 0) {
                             long timeToWait = System.currentTimeMillis() - this.nextAutoRefresh;
                             if (timeToWait < 0) {
-                                CP750Client.this.refresh();
+                                try {
+                                    CP750Client.this.refresh();
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                    continue;
+                                }
                                 this.nextAutoRefresh = System.currentTimeMillis() + this.refreshInterval;
                                 wait(this.refreshInterval);
                             } else {
