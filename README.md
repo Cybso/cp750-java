@@ -8,7 +8,7 @@ the oldest connection if a 21st connection is established. So be sure to gratefu
 shutdown each connection using the client's `close()` method, or it's
 `AutoCloseable` functionality.
 
-This project is NOT affiliated with, funded, or in any way associafunctionalityted
+This project is NOT affiliated with, funded, or in any way associated
 with *Dolby Laboratories, Inc*.
 
 ## Usage
